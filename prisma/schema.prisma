@@ -15,11 +15,22 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  clerkUserId String   @unique
-  email       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  clerkUserId           String   @unique
+  email                 String?
+  username              String?  @unique
+  displayName           String?
+  firstName             String?
+  lastName              String?
+  bio                   String?
+  imageUrl              String?
+  timezone              String?
+  locale                String?
+  preferences           Json     @default("{}")
+  onboardingCompleted   Boolean  @default(false)
+  onboardingCompletedAt DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@index([email])
 }

@@ -32,6 +32,10 @@ export async function POST(request: NextRequest) {
     if (event.type === "user.created") {
       const data = event.data as {
         id?: string;
+        username?: string | null;
+        first_name?: string | null;
+        last_name?: string | null;
+        image_url?: string | null;
         email_addresses?: Array<{ email_address?: string }>;
       };
 
@@ -43,7 +47,14 @@ export async function POST(request: NextRequest) {
       }
 
       const email = data.email_addresses?.[0]?.email_address ?? null;
-      await upsertUser({ clerkUserId: data.id, email });
+      await upsertUser({
+        clerkUserId: data.id,
+        email,
+        username: data.username ?? null,
+        firstName: data.first_name ?? null,
+        lastName: data.last_name ?? null,
+        imageUrl: data.image_url ?? null,
+      });
     }
 
     return NextResponse.json({ ok: true, requestId });
