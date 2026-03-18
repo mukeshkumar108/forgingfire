@@ -1,56 +1,111 @@
 import { z } from "zod";
 
+const canonicalLocale = (value: string) => {
+  try {
+    return Intl.getCanonicalLocales(value)[0] ?? value;
+  } catch {
+    return value;
+  }
+};
+
+const isValidLocale = (value: string) => {
+  try {
+    return Intl.getCanonicalLocales(value).length > 0;
+  } catch {
+    return false;
+  }
+};
+
+const hasSupportedValuesOf =
+  typeof Intl.supportedValuesOf === "function";
+
+const isValidTimezone = (value: string) => {
+  if (!hasSupportedValuesOf) return true;
+  return Intl.supportedValuesOf("timeZone").includes(value);
+};
+
+const nullableTrimmedString = (max: number) =>
+  z.union([
+    z.string().trim().max(max).transform((v) => (v === "" ? null : v)),
+    z.null(),
+  ]);
+
+const nullableUrlString = z.union([
+  z.string().trim().max(2048).transform((v, ctx) => {
+    if (v === "") return null;
+    try {
+      new URL(v);
+      return v;
+    } catch {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "invalid URL",
+      });
+      return z.NEVER;
+    }
+  }),
+  z.null(),
+]);
+
 export const userPreferencesSchema = z.object({
   notifications: z.object({
     push: z.boolean().default(true),
     email: z.boolean().default(true),
-  }).default({
+  }).strict().default({
     push: true,
     email: true,
   }),
   communications: z.object({
     marketing: z.boolean().default(false),
-  }).default({
+  }).strict().default({
     marketing: false,
   }),
   privacy: z.object({
     analytics: z.boolean().default(true),
-  }).default({
+  }).strict().default({
     analytics: true,
   }),
-});
+}).strict();
 
-const usernameSchema = z.string().trim().min(3).max(32).regex(/^[a-zA-Z0-9_.]+$/);
-const shortTextSchema = z.string().trim().min(1).max(120);
-const optionalProfileTextSchema = z.union([shortTextSchema, z.null()]);
+const usernameSchema = z.string().trim().min(3).max(32).regex(/^[a-z0-9._]+$/);
+const normalizedUsernameSchema = z.union([
+  z.string().trim().toLowerCase().pipe(usernameSchema),
+  z.null(),
+]);
 
 export const updateMeSchema = z.object({
   profile: z.object({
-    username: z.union([usernameSchema, z.null()]).optional(),
-    displayName: optionalProfileTextSchema.optional(),
-    firstName: optionalProfileTextSchema.optional(),
-    lastName: optionalProfileTextSchema.optional(),
-    bio: z.union([z.string().trim().min(1).max(280), z.null()]).optional(),
-    imageUrl: z.union([z.string().trim().url().max(2048), z.null()]).optional(),
-    timezone: z.union([z.string().trim().min(1).max(64), z.null()]).optional(),
-    locale: z.union([z.string().trim().min(2).max(35), z.null()]).optional(),
-  }).optional(),
+    username: normalizedUsernameSchema.optional(),
+    displayName: nullableTrimmedString(120).optional(),
+    firstName: nullableTrimmedString(80).optional(),
+    lastName: nullableTrimmedString(80).optional(),
+    bio: nullableTrimmedString(280).optional(),
+    imageUrl: nullableUrlString.optional(),
+    timezone: z.union([
+      z.string().trim().min(1).max(64).refine(isValidTimezone, "invalid timezone"),
+      z.null(),
+    ]).optional(),
+    locale: z.union([
+      z.string().trim().min(2).max(35).transform(canonicalLocale).refine(isValidLocale, "invalid locale"),
+      z.null(),
+    ]).optional(),
+  }).strict().optional(),
   preferences: z.object({
     notifications: z.object({
       push: z.boolean().optional(),
       email: z.boolean().optional(),
-    }).optional(),
+    }).strict().optional(),
     communications: z.object({
       marketing: z.boolean().optional(),
-    }).optional(),
+    }).strict().optional(),
     privacy: z.object({
       analytics: z.boolean().optional(),
-    }).optional(),
-  }).optional(),
+    }).strict().optional(),
+  }).strict().optional(),
   onboarding: z.object({
-    completed: z.boolean().optional(),
-  }).optional(),
-}).refine(
+    completed: z.literal(true).optional(),
+  }).strict().optional(),
+}).strict().refine(
   (value) => Boolean(value.profile || value.preferences || value.onboarding),
   { message: "at least one section is required" },
 );

@@ -7,6 +7,12 @@ import {
   userPreferencesSchema,
 } from "./users.schemas";
 
+function normalizeUsername(value: string | null | undefined) {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return value.trim().toLowerCase();
+}
+
 export type UserDTO = {
   id: string;
   clerkUserId: string;
@@ -44,21 +50,41 @@ export async function upsertUser(params: {
   lastName?: string | null;
   imageUrl?: string | null;
 }) {
-  const { clerkUserId, email, username, firstName, lastName, imageUrl } = params;
+  const {
+    clerkUserId,
+    email,
+    username,
+    firstName,
+    lastName,
+    imageUrl,
+  } = params;
 
-  return prisma.user.upsert({
+  const normalizedUsername = normalizeUsername(username);
+
+  const existing = await prisma.user.findUnique({
     where: { clerkUserId },
-    update: {
-      email: email ?? undefined,
-      username: username ?? undefined,
-      firstName: firstName ?? undefined,
-      lastName: lastName ?? undefined,
-      imageUrl: imageUrl ?? undefined,
-    },
-    create: {
+  });
+
+  if (existing) {
+    return prisma.user.update({
+      where: { clerkUserId },
+      data: {
+        // Clerk seeding is fallback-only for existing users:
+        // fill missing core identity fields, never overwrite app-managed values.
+        email: existing.email ?? email ?? undefined,
+        username: existing.username ?? normalizedUsername ?? undefined,
+        firstName: existing.firstName ?? firstName ?? undefined,
+        lastName: existing.lastName ?? lastName ?? undefined,
+        imageUrl: existing.imageUrl ?? imageUrl ?? undefined,
+      },
+    });
+  }
+
+  return prisma.user.create({
+    data: {
       clerkUserId,
       email: email ?? undefined,
-      username: username ?? undefined,
+      username: normalizedUsername ?? undefined,
       firstName: firstName ?? undefined,
       lastName: lastName ?? undefined,
       imageUrl: imageUrl ?? undefined,
@@ -122,17 +148,16 @@ export async function updateMe(userId: string, input: UpdateMeInput) {
   const onboardingCompleted =
     input.onboarding?.completed ?? existing.onboardingCompleted;
 
+  // Onboarding is one-way in this starter: completion can be set, not unset.
   const onboardingCompletedAt =
-    input.onboarding?.completed === undefined
-      ? existing.onboardingCompletedAt
-      : input.onboarding.completed
-        ? existing.onboardingCompletedAt ?? new Date()
-        : null;
+    input.onboarding?.completed === true
+      ? existing.onboardingCompletedAt ?? new Date()
+      : existing.onboardingCompletedAt;
 
   return prisma.user.update({
     where: { id: userId },
     data: {
-      username: input.profile?.username,
+      username: normalizeUsername(input.profile?.username),
       displayName: input.profile?.displayName,
       firstName: input.profile?.firstName,
       lastName: input.profile?.lastName,
