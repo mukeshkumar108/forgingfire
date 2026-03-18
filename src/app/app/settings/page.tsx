@@ -1,5 +1,5 @@
 import { currentUser } from "@clerk/nextjs/server";
-import { getUserByClerkId } from "@/lib/user";
+import { getUserByClerkId } from "@/modules/users/users.service";
 
 export default async function SettingsPage() {
   const cu = await currentUser();

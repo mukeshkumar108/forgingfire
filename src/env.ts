@@ -11,7 +11,6 @@ const envSchema = z.object({
   POSTGRES_PRISMA_URL: z.string().min(1),
   POSTGRES_URL_NON_POOLING: z.string().min(1),
   // Feature-specific values are optional at boot and validated when used.
-  BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
   CLERK_WEBHOOK_SECRET: z.string().min(1).optional(),
 });
 
@@ -21,10 +20,6 @@ const parsedEnv = skipEnvValidation
   : envSchema.parse(process.env);
 
 export const env = parsedEnv as z.infer<typeof envSchema>;
-
-export function getBlobReadWriteToken() {
-  return z.string().min(1).parse(env.BLOB_READ_WRITE_TOKEN);
-}
 
 export function getClerkWebhookSecret() {
   return z.string().min(1).parse(env.CLERK_WEBHOOK_SECRET);

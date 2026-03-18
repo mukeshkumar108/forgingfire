@@ -6,9 +6,10 @@ A reusable Next.js starter with:
 - neon postgres via vercel storage
 - prisma (pinned v6) + migrations
 - user table mapped to clerk user
-- vercel blob storage (with test route)
 - tailwind + shadcn-ready setup
 - zod-based env validation
+- modular service layer (`src/modules/*`)
+- versioned app API routes (`/api/v1/*`)
 
 ## quickstart (new project)
 
@@ -25,7 +26,6 @@ If pnpm blocks postinstall scripts (Prisma), run `pnpm approve-builds` then `pnp
 ### 3) create storage in vercel
 vercel dashboard → project → storage:
 - create neon postgres
-- create blob
 
 ### 4) clerk setup
 create a Clerk application.
@@ -41,11 +41,6 @@ pull env:
 ```bash
 vercel env pull .env.local
 cp .env.local .env
-```
-
-If you plan to use blob uploads, also set:
-```
-BLOB_READ_WRITE_TOKEN
 ```
 
 ### 5) migrate
@@ -67,9 +62,38 @@ pnpm build
 
 ## routes
 
-- /app/settings → proves clerk + db mapping
-- POST /api/blob-test → uploads a test blob (auth required)
+- GET /api/health → liveness + database connectivity
+- GET /api/v1/me → canonical authenticated user record (auto-provisions DB user if missing)
 - POST /api/webhooks/clerk → clerk webhook endpoint (public route + signature verification)
+
+## app api contract (`/api/v1/*`)
+
+All application-facing JSON endpoints return:
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
+or
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "message": "string",
+    "code": "STRING_CODE"
+  }
+}
+```
+
+## mobile auth behavior
+
+- Protected API routes use a shared `authGuard` helper.
+- Supports `Authorization: Bearer <token>` for React Native/mobile clients.
+- Cookie-based auth also continues to work for web usage.
+- `/api/v1/me` auto-provisions the DB user from Clerk if not already present.
 
 ## baseline rules
 
@@ -83,7 +107,6 @@ see `baseline.md`
 Env is validated with Zod in `src/env.ts`.
 - Core vars are required at boot: Clerk + Postgres.
 - Feature vars are validated when used:
-  - `BLOB_READ_WRITE_TOKEN` only for `/api/blob-test`
   - `CLERK_WEBHOOK_SECRET` only for `/api/webhooks/clerk`
 - Production build runs with `SKIP_ENV_VALIDATION=1` so CI/build can compile without secrets.
 - Add new variables in `src/env.ts` and `.env.example`.
@@ -93,3 +116,20 @@ Use pooled URL for app runtime (`POSTGRES_PRISMA_URL`) and direct URL for migrat
 
 ## clerk webhook user provisioning
 `user.created` is handled by `POST /api/webhooks/clerk` to upsert the DB user.
+
+## project structure (api/server)
+
+```txt
+src/
+  app/api/
+    health/route.ts
+    v1/me/route.ts
+    webhooks/clerk/route.ts
+  lib/
+    api/response.ts
+    api/validation.ts
+    auth/auth-guard.ts
+    prisma.ts
+  modules/
+    users/users.service.ts
+```

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { getClerkWebhookSecret } from "@/env";
-import { upsertUser } from "@/lib/user";
+import { upsertUser } from "@/modules/users/users.service";
 
 export const runtime = "nodejs";
 
