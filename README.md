@@ -1,4 +1,4 @@
-# nextstarter
+# forgingfire
 
 Mobile-first, headless backend starter for consumer React Native apps.
 This provides a ready-to-use backend with authentication, user system, device tracking, and subscriptions designed to plug directly into a React Native app.
