@@ -1,135 +1,96 @@
 # nextstarter
 
-A reusable Next.js starter with:
-- next.js (app router)
-- clerk auth (protected `/app/*`)
-- neon postgres via vercel storage
-- prisma (pinned v6) + migrations
-- user table mapped to clerk user
-- tailwind + shadcn-ready setup
-- zod-based env validation
-- modular service layer (`src/modules/*`)
-- versioned app API routes (`/api/v1/*`)
+Mobile-first, headless backend starter for consumer React Native apps.
+This provides a ready-to-use backend with authentication, user system, device tracking, and subscriptions designed to plug directly into a React Native app.
 
-## quickstart (new project)
+## Quickstart
 
-### 1) create a new repo from this template (github)
-click **use this template**.
+1. Create a new repo from this template
+- Click **Use this template** on GitHub.
 
-### 2) install + link vercel
+2. Install dependencies and link Vercel
 ```bash
 pnpm install
 vercel link
 ```
-If pnpm blocks postinstall scripts (Prisma), run `pnpm approve-builds` then `pnpm install` again.
-
-### 3) create storage in vercel
-vercel dashboard → project → storage:
-- create neon postgres
-
-### 4) clerk setup
-create a Clerk application.
-
-add env vars in vercel:
+If Prisma scripts are blocked:
+```bash
+pnpm approve-builds
+pnpm install
 ```
+
+3. Create database (Neon via Vercel)
+- Vercel dashboard -> your project -> Storage
+- Create **Neon Postgres**
+- Vercel will automatically inject the required database environment variables:
+  - `POSTGRES_PRISMA_URL`
+  - `POSTGRES_URL_NON_POOLING`
+
+4. Set up Clerk (Auth)
+- Go to https://clerk.com and create an application.
+- Add these env vars in Vercel:
+```bash
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 CLERK_SECRET_KEY
-CLERK_WEBHOOK_SECRET
 ```
+- These environment variables will be pulled into your local `.env` via `vercel env pull`.
 
-pull env:
+5. Pull environment variables
 ```bash
 vercel env pull .env.local
 cp .env.local .env
 ```
 
-### 5) migrate
+6. Run migrations
 ```bash
 pnpm exec prisma migrate dev
 ```
 
-### 6) run
+7. Start dev server
 ```bash
 pnpm dev
 ```
 
-### 7) health checks
+8. Smoke test
+- Open `/api/health`
+- Call `/api/v1/me` using a Clerk session token in:
+  - `Authorization: Bearer <token>`
+- Register a device via `POST /api/v1/devices`
+
+## Important
+- Clerk handles authentication.
+- Postgres is required.
+- This is a backend-first/headless starter (not a full web UI product).
+
+## What This Is
+- Next.js App Router backend
+- Clerk auth with bearer-token-friendly API protection
+- Prisma + Postgres data layer
+- Versioned app endpoints under `/api/v1/*`
+- Canonical app user (`/api/v1/me`) with profile/preferences/onboarding/subscription state
+- Device registration endpoint (`/api/v1/devices`)
+
+## Required Environment Variables
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+- `POSTGRES_PRISMA_URL`
+- `POSTGRES_URL_NON_POOLING`
+
+Optional:
+- `CLERK_WEBHOOK_SECRET` (required only for `/api/webhooks/clerk`)
+
+## Health Checks
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
 pnpm build
 ```
 
-## routes
-
-- GET /api/health → liveness + database connectivity
-- GET /api/v1/me → canonical authenticated user record (auto-provisions DB user if missing)
-- POST /api/webhooks/clerk → clerk webhook endpoint (public route + signature verification)
-
-## app api contract (`/api/v1/*`)
-
-All application-facing JSON endpoints return:
-```json
-{
-  "success": true,
-  "data": {},
-  "error": null
-}
-```
-or
-```json
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "message": "string",
-    "code": "STRING_CODE"
-  }
-}
-```
-
-## mobile auth behavior
-
-- Protected API routes use a shared `authGuard` helper.
-- Supports `Authorization: Bearer <token>` for React Native/mobile clients.
-- Cookie-based auth also continues to work for web usage.
-- `/api/v1/me` auto-provisions the DB user from Clerk if not already present.
-
-## baseline rules
-
-see `baseline.md`
-
-## notes
-- Next.js 16 uses proxy.ts (replaces middleware.ts).
-- Webhook provisioning: `POST /api/webhooks/clerk`, env `CLERK_WEBHOOK_SECRET`, event `user.created`.
-
-## environment validation
-Env is validated with Zod in `src/env.ts`.
-- Core vars are required at boot: Clerk + Postgres.
-- Feature vars are validated when used:
-  - `CLERK_WEBHOOK_SECRET` only for `/api/webhooks/clerk`
-- Production build runs with `SKIP_ENV_VALIDATION=1` so CI/build can compile without secrets.
-- Add new variables in `src/env.ts` and `.env.example`.
-
-## prisma pooled vs direct connections
-Use pooled URL for app runtime (`POSTGRES_PRISMA_URL`) and direct URL for migrations (`POSTGRES_URL_NON_POOLING`).
-
-## clerk webhook user provisioning
-`user.created` is handled by `POST /api/webhooks/clerk` to upsert the DB user.
-
-## project structure (api/server)
-
-```txt
-src/
-  app/api/
-    health/route.ts
-    v1/me/route.ts
-    webhooks/clerk/route.ts
-  lib/
-    api/response.ts
-    api/validation.ts
-    auth/auth-guard.ts
-    prisma.ts
-  modules/
-    users/users.service.ts
-```
+## Docs
+- [Architecture](docs/architecture.md)
+- [API Contract](docs/api-contract.md)
+- [Frontend Integration](docs/frontend-integration.md)
+- [AI Context](docs/ai-context.md)
+- [Changelog](CHANGELOG.md)
+- [Agent Rules](AGENTS.md)

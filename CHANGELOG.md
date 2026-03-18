@@ -2,6 +2,34 @@
 
 Concise engineering changelog for this starter.
 
+## Phase 5 — Tests, Docs, and Finalisation (2026-03-18)
+### Summary
+- Added lightweight tests for core auth/API/device/subscription flows.
+- Split and clarified docs for architecture, API contracts, and frontend integration.
+- Simplified README for faster local startup and navigation.
+
+### Key Changes
+- Added Vitest-based test setup and test script.
+- Added tests for:
+  - auth guard behavior
+  - `/api/v1/me` response structure
+  - device registration idempotency logic
+  - subscription entitlement mapping
+- Added `docs/` with:
+  - `architecture.md`
+  - `api-contract.md`
+  - `frontend-integration.md`
+  - `ai-context.md`
+- Simplified `README.md` to:
+  - explain purpose
+  - show local setup
+  - list required env vars
+  - link documentation
+
+### Decisions Locked In
+- Keep test scope light and fast around critical contract flows.
+- Keep docs split by audience/use-case rather than expanding a single long README.
+
 ## Phase 4B — Subscriptions Foundation (2026-03-18)
 ### Summary
 - Added subscriptions data model and entitlement resolution foundation.
