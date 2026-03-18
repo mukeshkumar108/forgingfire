@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { validateJsonBody } from "@/lib/api/validation";
 import { authGuard } from "@/lib/auth/auth-guard";
+import { getUserEntitlements } from "@/modules/subscriptions/subscriptions.service";
 import { toUserDTO, updateMe } from "@/modules/users/users.service";
 import { updateMeSchema } from "@/modules/users/users.schemas";
 
@@ -12,7 +13,11 @@ export async function GET(request: NextRequest) {
   const auth = await authGuard(request);
   if (!auth.ok) return auth.response;
 
-  return apiSuccess(toUserDTO(auth.context.user));
+  const entitlements = await getUserEntitlements(auth.context.user.id);
+  return apiSuccess({
+    ...toUserDTO(auth.context.user),
+    subscription: entitlements,
+  });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -24,7 +29,12 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const updated = await updateMe(auth.context.user.id, parsedBody.data);
-    return apiSuccess(toUserDTO(updated));
+    const entitlements = await getUserEntitlements(auth.context.user.id);
+
+    return apiSuccess({
+      ...toUserDTO(updated),
+      subscription: entitlements,
+    });
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

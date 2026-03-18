@@ -2,6 +2,36 @@
 
 Concise engineering changelog for this starter.
 
+## Phase 4B — Subscriptions Foundation (2026-03-18)
+### Summary
+- Added subscriptions data model and entitlement resolution foundation.
+- Integrated subscription state into `/api/v1/me` for mobile clients.
+
+### Key Changes
+- Added `Subscription` model with:
+  - relation to `User`
+  - `plan` (string)
+  - `status` enum (`active`, `trialing`, `canceled`, `expired`)
+  - `source` enum (`stripe`, `apple`, `google`, `manual`)
+  - optional `currentPeriodEnd`
+  - index on `userId`
+  - no uniqueness constraint per user (supports multiple historical records)
+- Added migration for subscription schema.
+- Added `src/modules/subscriptions/subscriptions.service.ts`:
+  - `getActiveSubscription(userId)` finds the single best active/trialing candidate ordered by `currentPeriodEnd DESC (nulls last)`, then `createdAt DESC`
+  - `resolveEntitlements(userId)` returns stable entitlements:
+    - `isPro`
+    - `plan` (`free` | `pro`)
+    - `status` (`active` | `trialing` | `none`)
+  - `getUserEntitlements(userId)` helper alias for future feature usage
+- Extended `/api/v1/me` (GET and PATCH responses) to include:
+  - `subscription: { isPro, plan, status }`
+
+### Decisions Locked In
+- Subscription records are source-of-truth history; entitlements are a separate resolved view.
+- No billing-provider integration, webhook ingestion, or billing logic in this phase.
+- Clarified subscription selection and entitlement mapping rules for deterministic `/api/v1/me` responses.
+
 ## Phase 4A — Devices and Notifications Foundation (2026-03-18)
 ### Summary
 - Added device registration foundation for mobile clients.
