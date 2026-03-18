@@ -2,6 +2,39 @@
 
 Concise engineering changelog for this starter.
 
+## Phase 4A — Devices and Notifications Foundation (2026-03-18)
+### Summary
+- Added device registration foundation for mobile clients.
+- Added lightweight notifications foundation without delivery infrastructure.
+
+### Key Changes
+- Added `Device` model with:
+  - relation to `User`
+  - `platform` enum (`ios | android | web`)
+  - unique `pushToken`
+  - optional `appVersion`
+  - `lastSeenAt`, `createdAt`, `updatedAt`
+  - index on `userId`
+- Added migration for `Device` schema.
+- Added `src/modules/devices/devices.service.ts`:
+  - idempotent registration via `pushToken` upsert
+  - dedupe/avoid duplicate records
+  - metadata and `lastSeenAt` updates on re-registration
+- Added `POST /api/v1/devices`:
+  - authenticated via `authGuard`
+  - Zod-validated payload
+  - shared API success/error contract
+  - standardized failure code `DEVICE_REGISTRATION_FAILED`
+- Added `src/modules/notifications/notifications.service.ts`:
+  - `getUserNotificationPreferences(userId)` reads from existing `User.preferences`
+  - no push sending, queues, or worker infra
+
+### Decisions Locked In
+- Device registration is idempotent and token-deduplicated.
+- Notifications foundation is read-only preference access at this phase.
+- No push delivery infrastructure, queueing, or subscription concerns in Phase 4A.
+- Device ownership is last-write-wins by pushToken; tokens are reassigned on login.
+
 ## Phase 3.5 — Decision Hardening and Contract Tightening (2026-03-18)
 ### Summary
 - Hardened username/profile/preferences/onboarding behavior already introduced in Phase 3.
