@@ -10,8 +10,22 @@ const envSchema = z.object({
   CLERK_SECRET_KEY: z.string().min(1),
   POSTGRES_PRISMA_URL: z.string().min(1),
   POSTGRES_URL_NON_POOLING: z.string().min(1),
-  BLOB_READ_WRITE_TOKEN: z.string().min(1),
-  CLERK_WEBHOOK_SECRET: z.string().min(1),
+  // Feature-specific values are optional at boot and validated when used.
+  BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
+  CLERK_WEBHOOK_SECRET: z.string().min(1).optional(),
 });
 
-export const env = envSchema.parse(process.env);
+const skipEnvValidation = process.env.SKIP_ENV_VALIDATION === "1";
+const parsedEnv = skipEnvValidation
+  ? envSchema.partial().parse(process.env)
+  : envSchema.parse(process.env);
+
+export const env = parsedEnv as z.infer<typeof envSchema>;
+
+export function getBlobReadWriteToken() {
+  return z.string().min(1).parse(env.BLOB_READ_WRITE_TOKEN);
+}
+
+export function getClerkWebhookSecret() {
+  return z.string().min(1).parse(env.CLERK_WEBHOOK_SECRET);
+}

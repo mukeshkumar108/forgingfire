@@ -1,17 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { verifyWebhook } from "@clerk/nextjs/webhooks";
-import { env } from "@/env";
+import { getClerkWebhookSecret } from "@/env";
 import { upsertUser } from "@/lib/user";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const requestId = crypto.randomUUID();
 
   let event: Awaited<ReturnType<typeof verifyWebhook>>;
   try {
     event = await verifyWebhook(request, {
-      signingSecret: env.CLERK_WEBHOOK_SECRET,
+      signingSecret: getClerkWebhookSecret(),
     });
   } catch (error) {
     console.error("[clerk-webhook] invalid signature", { requestId, error });
